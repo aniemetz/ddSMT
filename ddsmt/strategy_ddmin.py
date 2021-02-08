@@ -19,6 +19,7 @@
 # along with ddSMT.  If not, see <https://www.gnu.org/licenses/>.
 
 import multiprocessing
+import multiprocessing.pool
 import collections
 import logging
 import pickle
@@ -308,7 +309,8 @@ def _check_par(taskgen, nexprs, stats):
     __abort_flag = multiprocessing.Manager().Event()
 
     start_index = 0
-    with multiprocessing.Pool(options.args().jobs) as pool:
+    #with multiprocessing.Pool(options.args().jobs) as pool:
+    with multiprocessing.pool.ThreadPool(options.args().jobs) as pool:
         while start_index >= 0:
             start_index = -1
             skip = False

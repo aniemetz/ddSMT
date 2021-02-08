@@ -21,6 +21,7 @@
 import collections
 import logging
 import multiprocessing
+import multiprocessing.pool
 import pickle
 import sys
 import time
@@ -236,7 +237,8 @@ def reduce(exprs):
     stats = MutatorStats()
 
     # use one pool for the whole reduction
-    with multiprocessing.Pool(options.args().jobs) as pool:
+    #with multiprocessing.Pool(options.args().jobs) as pool:
+    with multiprocessing.pool.ThreadPool(options.args().jobs) as pool:
         # abort flag is passed to both producer and consumer
         # important: the pool will break if the abort_flag is destroyed early
         abort_flag = multiprocessing.Manager().Event()
