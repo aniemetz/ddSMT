@@ -22,7 +22,6 @@ import collections
 import logging
 import multiprocessing
 import multiprocessing.pool
-import pickle
 import sys
 import time
 import traceback
@@ -133,7 +132,8 @@ class Producer:
                         if self.__abort.is_set():
                             break
                         assert isinstance(x, Simplification)
-                        yield Task(count, f'(global) {m}', self.__original, x, None)
+                        yield Task(count, f'(global) {m}', self.__original, x,
+                                   None)
             except Exception as e:
                 logging.info(f'{type(e)} in application of {m}: {e}')
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -168,11 +168,11 @@ class Consumer:
             return abortres
         try:
             start = time.time()
-            simp = task.simp
-            assert isinstance(simp, Simplification)
+
+            assert isinstance(task.simp, Simplification)
             if self.__abort.is_set():
                 return abortres
-            exprs = apply_simp(task.exprs, simp)
+            exprs = apply_simp(task.exprs, task.simp)
 
             if self.__abort.is_set():
                 return abortres
@@ -181,10 +181,9 @@ class Consumer:
             if self.__abort.is_set():
                 return abortres
             if res:
-                return (True,
-                        Task(task.nodeid, task.name, exprs, None, runtime))
-            return (False,
-                    Task(task.nodeid, task.name, None, None, runtime))
+                return (True, Task(task.nodeid, task.name, exprs, None,
+                                   runtime))
+            return (False, Task(task.nodeid, task.name, None, None, runtime))
         except Exception as e:
             logging.info(f'{type(e)} in check of {task.name}: {e}')
             exc_type, exc_value, exc_traceback = sys.exc_info()
