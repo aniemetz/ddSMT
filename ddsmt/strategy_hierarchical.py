@@ -109,7 +109,7 @@ class Producer:
         self.__mutators = mutators
         self.__abort = abort_flag
         self.__original = original
-        self.__pickled = pickle.dumps(original)
+        #self.__pickled = pickle.dumps(original)
 
     def __mutate_node(self, count, linput):
         """Apply all mutators to the given node.
@@ -127,15 +127,13 @@ class Producer:
                         if self.__abort.is_set():
                             break
                         assert isinstance(x, Simplification)
-                        yield Task(count, str(m), self.__pickled,
-                                   pickle.dumps(x), None)
+                        yield Task(count, str(m), self.__original, x, None)
                 if hasattr(m, 'global_mutations'):
                     for x in m.global_mutations(linput, self.__original):
                         if self.__abort.is_set():
                             break
                         assert isinstance(x, Simplification)
-                        yield Task(count, f'(global) {m}', self.__pickled,
-                                   pickle.dumps(x), None)
+                        yield Task(count, f'(global) {m}', self.__original, x, None)
             except Exception as e:
                 logging.info(f'{type(e)} in application of {m}: {e}')
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -164,17 +162,17 @@ class Consumer:
         self.__abort = abort_flag
 
     def check(self, task):
-        abortres = pickle.dumps(
-            (False, Task(task.nodeid, task.name, None, None, None)))
+        abortres = (False,
+                    Task(task.nodeid, task.name, None, None, None))
         if self.__abort.is_set():
             return abortres
         try:
             start = time.time()
-            simp = pickle.loads(task.simp)
+            simp = task.simp
             assert isinstance(simp, Simplification)
             if self.__abort.is_set():
                 return abortres
-            exprs = apply_simp(pickle.loads(task.exprs), simp)
+            exprs = apply_simp(task.exprs, simp)
 
             if self.__abort.is_set():
                 return abortres
@@ -183,10 +181,10 @@ class Consumer:
             if self.__abort.is_set():
                 return abortres
             if res:
-                return pickle.dumps(
-                    (True, Task(task.nodeid, task.name, exprs, None, runtime)))
-            return pickle.dumps(
-                (False, Task(task.nodeid, task.name, None, None, runtime)))
+                return (True,
+                        Task(task.nodeid, task.name, exprs, None, runtime))
+            return (False,
+                    Task(task.nodeid, task.name, None, None, runtime))
         except Exception as e:
             logging.info(f'{type(e)} in check of {task.name}: {e}')
             exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -262,7 +260,7 @@ def reduce(exprs):
                 for result in pool.imap_unordered(cons.check,
                                                   prod.generate(skip, params)):
                     nchecks += 1
-                    success, task = pickle.loads(result)
+                    success, task = result
                     if abort_flag.is_set():
                         # skip remaining results if we had a success
                         skip = min(skip, task.nodeid - 1)

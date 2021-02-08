@@ -64,7 +64,7 @@ class TaskGenerator:
 
         njobs = options.args().jobs
         if njobs > 1 and len(self.subsets) > 2 * njobs:
-            self.pickled_exprs = pickle.dumps(exprs)
+            self.pickled_exprs = exprs
         else:
             self.pickled_exprs = None
 
@@ -91,7 +91,7 @@ class TaskGenerator:
 
             logging.debug(f'TaskGen: Generate next {task_id}')
             if self.pickled_exprs:
-                return Task(task_id, self.pickled_exprs, pickle.dumps(simps))
+                return Task(task_id, self.pickled_exprs, simps)
             return Task(task_id, self.exprs, simps)
         raise StopIteration
 
@@ -141,7 +141,7 @@ class TaskGenerator:
         """Update ``self.exprs`` with new ``exprs``."""
         self.exprs = exprs
         if self.pickled_exprs is not None:
-            self.pickled_exprs = pickle.dumps(exprs)
+            self.pickled_exprs = exprs
 
     def stop(self):
         """Stop generating new taks."""
@@ -219,29 +219,25 @@ def _worker(task):
             logging.debug(f'Worker: Abort task {task.id}')
             return Result(task.id, False, 0, [], 0)
 
-        if isinstance(task.exprs, bytes):
-            hashval = hash(task.exprs)
-            if __cached_exprs_hash != hashval:
-                __cached_exprs = pickle.loads(task.exprs)
-                __cached_exprs_hash = hashval
+    if isinstance(task.exprs, bytes):
+        hashval = hash(task.exprs)
+        if __cached_exprs_hash != hashval:
+            __cached_exprs = task.exprs
+            __cached_exprs_hash = hashval
 
-            exprs = __cached_exprs
-            substs = pickle.loads(task.simplifications)
-        else:
-            exprs = task.exprs
-            substs = task.simplifications
+        exprs = __cached_exprs
+        substs = task.simplifications
+    else:
+        exprs = task.exprs
+        substs = task.simplifications
 
-        ntests = 0
-        for mexprs in _simp(exprs, substs):
-            ntests += 1
-            if checker.check_exprs(mexprs):
-                nreduced = nodes.count_exprs(exprs) - nodes.count_exprs(mexprs)
-                return Result(task.id, True, nreduced, mexprs, ntests)
-        return Result(task.id, False, 0, [], ntests)
-    except Exception as e:
-        logging.info(f'{type(e)} in ddmin worker: {e}')
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        traceback.print_tb(exc_traceback, limit=10, file=sys.stderr)
+    ntests = 0
+    for mexprs in _simp(exprs, substs):
+        ntests += 1
+        if checker.check_exprs(mexprs):
+            nreduced = nodes.count_exprs(exprs) - nodes.count_exprs(mexprs)
+            return Result(task.id, True, nreduced, mexprs, ntests)
+    return Result(task.id, False, 0, [], ntests)
 
 
 __last_msg = ""
