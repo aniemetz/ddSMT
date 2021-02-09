@@ -219,25 +219,29 @@ def _worker(task):
             logging.debug(f'Worker: Abort task {task.id}')
             return Result(task.id, False, 0, [], 0)
 
-    if isinstance(task.exprs, bytes):
-        hashval = hash(task.exprs)
-        if __cached_exprs_hash != hashval:
-            __cached_exprs = task.exprs
-            __cached_exprs_hash = hashval
+        if isinstance(task.exprs, bytes):
+            hashval = hash(task.exprs)
+            if __cached_exprs_hash != hashval:
+                __cached_exprs = task.exprs
+                __cached_exprs_hash = hashval
 
-        exprs = __cached_exprs
-        substs = task.simplifications
-    else:
-        exprs = task.exprs
-        substs = task.simplifications
+            exprs = __cached_exprs
+            substs = task.simplifications
+        else:
+            exprs = task.exprs
+            substs = task.simplifications
 
-    ntests = 0
-    for mexprs in _simp(exprs, substs):
-        ntests += 1
-        if checker.check_exprs(mexprs):
-            nreduced = nodes.count_exprs(exprs) - nodes.count_exprs(mexprs)
-            return Result(task.id, True, nreduced, mexprs, ntests)
-    return Result(task.id, False, 0, [], ntests)
+        ntests = 0
+        for mexprs in _simp(exprs, substs):
+            ntests += 1
+            if checker.check_exprs(mexprs):
+                nreduced = nodes.count_exprs(exprs) - nodes.count_exprs(mexprs)
+                return Result(task.id, True, nreduced, mexprs, ntests)
+        return Result(task.id, False, 0, [], ntests)
+    except Exception as e:
+        logging.info(f'{type(e)} in ddmin worker: {e}')
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        traceback.print_tb(exc_traceback, limit=10, file=sys.stderr)
 
 
 __last_msg = ""
