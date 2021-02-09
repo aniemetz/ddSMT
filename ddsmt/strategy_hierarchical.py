@@ -89,7 +89,7 @@ def get_pass(passes, id):
 # nodeid: id of the mutated node in bfs order. Only used for progress indication
 # name: name of the mutator
 # exprs: the current input
-# simp: the substitution to be checked
+# simp: the simplification to be checked
 # runtime: time needed to check this task
 Task = collections.namedtuple('Task',
                               ['nodeid', 'name', 'exprs', 'simp', 'runtime'])
@@ -162,8 +162,7 @@ class Consumer:
         self.__abort = abort_flag
 
     def check(self, task):
-        abortres = (False,
-                    Task(task.nodeid, task.name, None, None, None))
+        abortres = (False, Task(task.nodeid, task.name, None, None, None))
         if self.__abort.is_set():
             return abortres
         try:
