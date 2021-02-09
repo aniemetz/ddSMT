@@ -319,7 +319,6 @@ def _check_par(taskgen, nexprs, stats):
                     taskgen.stop()
                     taskgen.update(result.exprs)
                     nodeio.write_smtlib_to_file(outfile, taskgen.exprs)
-                    smtlib.collect_information(taskgen.exprs)
                     stats['tests_success'] += 1
                     stats['reduced'] += result.reduced
                     start_index = result.task_id + 1
@@ -342,6 +341,7 @@ def _check_par(taskgen, nexprs, stats):
 
             if __abort_flag.is_set():
                 __abort_flag.clear()
+                smtlib.collect_information(taskgen.exprs)
                 taskgen.reset(start_index)
                 taskgen.start()
                 logging.debug(f'Restart tests starting from {start_index}')
